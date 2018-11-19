@@ -1,0 +1,88 @@
+<?php
+
+// disable garbage collection
+gc_disable();
+
+// repress any output from the user scripts
+ob_start();
+
+$class = '{{ class }}';
+$file = '{{ file }}';
+$beforeMethods = {{ beforeMethods }};
+$afterMethods = {{ afterMethods }};
+$bootstrap = '{{ bootstrap }}';
+$parameters = {{ parameters }};
+$warmup = {{ warmup }};
+
+if ($bootstrap) {
+    call_user_func(function () use ($bootstrap) {
+        $loader = require_once($bootstrap);
+
+        if ($loader instanceof \Composer\Autoload\ClassLoader) {
+            $loader->setPsr4('Blackfire\\', '{{ extension_path }}/vendor/blackfire/php-sdk/src/Blackfire');
+            $loader->setPsr4('Composer\\CaBundle\\', '{{ extension_path }}/vendor/composer/ca-bundle/src');
+        }
+    });
+}
+
+require_once($file);
+
+$benchmark = new $class();
+
+foreach ($beforeMethods as $beforeMethod) {
+    $benchmark->$beforeMethod($parameters);
+}
+
+// warmup if required
+if ($warmup) {
+    for ($i = 0; $i < $warmup; $i++) {
+        $benchmark->{{ subject }}($parameters);
+    }
+}
+
+$blackfire = new \Blackfire\Client();
+
+$config = new \Blackfire\Profile\Configuration();
+$config->setSamples({{ revolutions }});
+$probe = $blackfire->createProbe(null, false);
+
+// run the benchmarks: note that passing arguments to the method slightly increases
+// the calltime, so we explicitly do one thing or the other depending on if parameters
+// are provided.
+if ($parameters) {
+    for ($i = 0; $i < {{ revolutions }}; $i++) {
+        $probe->enable();
+        $benchmark->{{ subject }}($parameters);
+        $probe->close();
+    }
+} else {
+    for ($i = 0; $i < {{ revolutions }}; $i++) {
+        $probe->enable();
+        $benchmark->{{ subject }}();
+        $probe->close();
+    }
+}
+
+foreach ($afterMethods as $afterMethod) {
+    $benchmark->$afterMethod($parameters);
+}
+
+$buffer = ob_get_contents();
+ob_end_clean();
+
+$profile = $blackfire->endProbe($probe);
+
+echo json_encode(array(
+    'cost' => [
+        'wt' => $profile->getMainCost()->getWallTime(),
+        'io' => $profile->getMainCost()->getIo(),
+        'cpu' => $profile->getMainCost()->getCpu(),
+        'mu' => $profile->getMainCost()->getMemoryUsage(),
+        'pmu' => $profile->getMainCost()->getPeakMemoryUsage(),
+        'net' => $profile->getMainCost()->getNetwork(),
+    ],
+    'profile' => $profile->getUrl(),
+    'buffer' => $buffer,
+));
+
+exit(0);

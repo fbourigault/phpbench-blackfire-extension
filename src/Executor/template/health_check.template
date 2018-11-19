@@ -1,0 +1,20 @@
+<?php
+
+if (false === extension_loaded('json')) {
+    throw new \RuntimeException(
+        'PHPBench currently requires the JSON extension. If you are
+        using the --php-disable-ini feature, you should explicitly load the json
+        extension, e.g. --php-config="extension:json.so"'
+    );
+}
+
+if (false === extension_loaded('blackfire')) {
+    throw new \RuntimeException(
+        'PHPBench currently requires the Blackfire extension. If you are
+        using the --php-disable-ini feature, you should explicitly load the blackfire
+        extension, e.g. --php-config="extension:blackfire.so"'
+    );
+}
+
+echo '{}';
+exit(0);

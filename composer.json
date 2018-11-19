@@ -1,0 +1,18 @@
+{
+    "name": "fbourigault/phpbench-blackfire-extension",
+    "description": "Blackfire.io extension for PHPBench",
+    "license": "MIT",
+    "require": {
+        "php": "^7.2",
+        "ext-json": "*",
+        "blackfire/php-sdk": "^1.17"
+    },
+    "autoload": {
+        "psr-4": {
+            "Fbourigault\\PhpBench\\Extension\\Blackfire\\": "src/"
+        }
+    },
+    "require-dev": {
+        "phpbench/phpbench": "^0.14"
+    }
+}
